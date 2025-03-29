@@ -14,5 +14,11 @@
   ],
   "env": {
     "CORS_ORIGIN": "https://moviebox-frontend.vercel.app"
+  },
+  "functions": {
+    "api/*.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
   }
 }

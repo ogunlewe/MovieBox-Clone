@@ -1,10 +1,6 @@
-
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-
 import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore } from "firebase/firestore/lite";
+import { getAuth } from "firebase/auth/dist/esm/index.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -13,11 +9,11 @@ const firebaseConfig = {
   projectId: "moviebox-ced7f",
   storageBucket: "moviebox-ced7f.firebasestorage.app",
   messagingSenderId: "640602090923",
-  appId: "1:640602090923:web:ef6e343de4b6d7d39ab6ee"
+  appId: "1:640602090923:web:ef6e343de4b6d7d39ab6ee",
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig)
+const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 

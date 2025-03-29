@@ -13,7 +13,7 @@ import {
   setDoc,
   deleteDoc,
   updateDoc,
-} from "firebase/firestore";
+} from "firebase/firestore/lite";
 import moviesRoute from "./routes/movies.js";
 import { scrapeMovies, scrapeMovieByTitle } from "./scrapers/mycimaScraper.js";
 import rangeParser from "range-parser";
