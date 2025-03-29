@@ -13,7 +13,7 @@ const MAX_PAGES = 2; // Change this if you want more pages
 const scrapeMovies = async () => {
   try {
     const browser = await puppeteer.launch({
-      headless: "false", // Change to false to see the browser
+      headless: "new", // Change to false to see the browser
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -33,7 +33,7 @@ const scrapeMovies = async () => {
       await page.goto(`${BASE_URL}/browse-movies?page=${i}`, {
         waitUntil: "domcontentloaded",
       });
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
  // Wait 2 seconds for page content to fully load
 
       await page
@@ -122,7 +122,7 @@ const scrapeMovieByTitle = async (title) => {
     const page = await browser.newPage();
 
     // Configure page settings
-    await page.setDefaultNavigationTimeout(30000);
+    await page.setDefaultNavigationTimeout(60000);
     await page.setRequestInterception(true);
 
     
@@ -138,8 +138,8 @@ const scrapeMovieByTitle = async (title) => {
       title
     )}/all/all/0/latest/0/all`;
     console.log(`🔍 Searching at: ${searchUrl}`);
-    await page.goto(searchUrl, { timeout: 60000, waitUntil: "networkidle2" });
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await page.goto(searchUrl, { timeout: 80000, waitUntil: "networkidle2" });
+    await new Promise((resolve) => setTimeout(resolve, 3000));
  
 
     // First get all movie basic info
