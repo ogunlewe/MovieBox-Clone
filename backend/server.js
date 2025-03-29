@@ -23,7 +23,21 @@ import NodeCache from "node-cache"; // Add this new code after yourusing imports
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: "http://localhost:5173" }));
+const allowedOrigins = [process.env.CORS_ORIGIN, "http://localhost:5173"];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
 // app.use(express.json());
 
 app.use(express.urlencoded({ extended: true })); // Add this to parse URL-encoded bodies
@@ -71,127 +85,30 @@ app.get("/", (req, res) => {
 
 // ✅ Fetch all movies from Firestore (or scrape if empty)
 app.get("/movies", async (req, res) => {
-  const { page = 1, limit = 20 } = req.query;
-
   try {
     const moviesCollection = collection(db, "movies");
     const snapshot = await getDocs(moviesCollection);
-    let movies = [];
 
     if (snapshot.empty) {
       console.warn("No movies found in the database. Scraping movies...");
-      movies = await scrapeMovies();
+      const scrapedMovies = await scrapeMovies();
 
-      // Save scraped movies to database
-      for (const movie of movies) {
+      for (let movie of scrapedMovies) {
         try {
-          const movieDoc = doc(
-            moviesCollection,
-            `${movie.title}-${movie.year || "unknown"}`
-          );
+          const movieDoc = doc(moviesCollection, movie.title);
           await setDoc(movieDoc, movie, { merge: true });
         } catch (error) {
           console.error(`Failed to save movie: ${movie.title}`, error);
         }
       }
-    } else {
-      movies = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      return res.json(scrapedMovies);
     }
 
-    // Pagination logic
-    const startIndex = (parseInt(page) - 1) * parseInt(limit);
-    const endIndex = startIndex + parseInt(limit);
-    const paginatedMovies = movies.slice(startIndex, endIndex);
-
-    res.json({
-      movies: paginatedMovies,
-      pagination: {
-        total: movies.length,
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(movies.length / parseInt(limit)),
-        hasMore: endIndex < movies.length,
-      },
-    });
+    const movies = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    res.json(movies);
   } catch (error) {
     console.error("Error fetching movies:", error);
-    res.status(500).json({
-      movies: [],
-      pagination: {
-        total: 0,
-        currentPage: 1,
-        totalPages: 0,
-        hasMore: false,
-      },
-    });
-  }
-});
-
-// Move and update the search endpoint (place this BEFORE /movies/:id)
-app.get("/movies/search", async (req, res) => {
-  const { title, page = 1, limit = 20 } = req.query;
-  if (!title) {
-    return res.status(400).json({ error: "Title query parameter is required" });
-  }
-
-  try {
-    console.log(`Searching for movie: "${title}"`);
-    const moviesCollection = collection(db, "movies");
-
-    // Search in database first
-    const snapshot = await getDocs(moviesCollection);
-    let matchingMovies = snapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .filter((movie) =>
-        movie.title.toLowerCase().includes(title.toLowerCase())
-      );
-
-    // If not found in database, try scraping
-    if (matchingMovies.length === 0) {
-      console.log(`Scraping for movie: "${title}"`);
-      const scrapedMovies = await scrapeMovieByTitle(title);
-
-      if (scrapedMovies && scrapedMovies.length > 0) {
-        // Save scraped movies to database
-        for (const movie of scrapedMovies) {
-          try {
-            const movieDoc = doc(
-              moviesCollection,
-              `${movie.title}-${movie.year || "unknown"}`
-            );
-            await setDoc(movieDoc, movie, { merge: true });
-          } catch (error) {
-            console.error(`Failed to save movie: ${movie.title}`, error);
-          }
-        }
-        matchingMovies = scrapedMovies;
-      }
-    }
-
-    // Pagination logic
-    const startIndex = (parseInt(page) - 1) * parseInt(limit);
-    const endIndex = startIndex + parseInt(limit);
-    const paginatedMovies = matchingMovies.slice(startIndex, endIndex);
-
-    return res.json({
-      movies: paginatedMovies,
-      pagination: {
-        total: matchingMovies.length,
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(matchingMovies.length / parseInt(limit)),
-        hasMore: endIndex < matchingMovies.length,
-      },
-    });
-  } catch (error) {
-    console.error("Error searching for movie:", error);
-    res.status(500).json({
-      movies: [],
-      pagination: {
-        total: 0,
-        currentPage: 1,
-        totalPages: 0,
-        hasMore: false,
-      },
-    });
+    res.status(500).json({ error: "Error fetching movies" });
   }
 });
 
@@ -256,32 +173,89 @@ app.get("/api/movies", async (req, res) => {
   }
 });
 
+// ✅ Search movies by title
+app.get("/movies/search", async (req, res) => {
+  const { title } = req.query;
+  if (!title)
+    return res.status(400).json({ error: "Title query parameter is required" });
+
+  try {
+    console.log(`Searching for movie: "${title}"`);
+    const moviesCollection = collection(db, "movies");
+
+    const snapshot = await getDocs(moviesCollection);
+    const movies = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .filter((movie) =>
+        movie.title.toLowerCase().includes(title.toLowerCase())
+      );
+
+    if (movies.length > 0) return res.json(movies);
+
+    console.warn(`Movie "${title}" not found in the database. Scraping...`);
+    const scrapedMovies = await scrapeMovieByTitle(title);
+
+    if (scrapedMovies.length > 0) return res.json(scrapedMovies);
+
+    res
+      .status(404)
+      .json({ error: `Movie "${title}" not found after scraping ` });
+  } catch (error) {
+    console.error("Error searching for movie:", error);
+    res.status(500).json({ error: "Error searching for movie" });
+  }
+});
+
 // ✅ Stream movies using magnet link
 app.get("/stream", async (req, res) => {
   try {
     const magnetLink = decodeURIComponent(req.query.magnet);
+
     if (!magnetLink) {
       return res.status(400).json({ error: "Magnet link is required" });
     }
 
+    console.log("Processing magnet link:", magnetLink);
+
+    let parsedTorrent;
+    try {
+      parsedTorrent = parseTorrent(magnetLink);
+    } catch (parseError) {
+      console.error("Failed to parse torrent:", parseError);
+      return res.status(400).json({ error: "Invalid magnet link format" });
+    }
+
+    // Replace the existing engine configuration with this optimized version
     const engine = torrentStream(magnetLink, {
-      connections: 50,
-      path: "./temp",
-      buffer: true,
-      sequential: true,
+      connections: 100, // Balanced number of connections
+      maxConns: 200, // Maximum connections per torrent
+      uploadRateLimit: 100000, // 100KB/s upload limit
+      downloadRateLimit: 0, // No download limit
+      tmp: "./temp", // Temporary folder
+      path: "./temp", // Download path
+      verify: false, // Skip verification for faster initial streaming
+      dht: true, // Enable DHT (Distributed Hash Table)
+      tracker: true, // Enable trackers
+      trackers: [
+        // More reliable trackers
+        "udp://tracker.opentrackr.org:1337/announce",
+        "udp://9.rarbg.com:2810/announce",
+        "udp://tracker.openbittorrent.com:6969/announce",
+        "udp://tracker.internetwarriors.net:1337/announce",
+        "udp://tracker.leechers-paradise.org:6969/announce",
+        "http://tracker.openbittorrent.com:80/announce",
+        "udp://exodus.desync.com:6969/announce",
+      ],
+      webSeeds: true, // Enable web seeds
+      strategy: "sequential", // Sequential download strategy for streaming
     });
 
     engine.on("ready", () => {
-      const file = engine.files.find(
-        (f) =>
-          f.name.endsWith(".mp4") ||
-          f.name.endsWith(".mkv") ||
-          f.name.endsWith(".avi")
-      );
+      const file = engine.files.reduce((a, b) => (a.length > b.length ? a : b));
 
       if (!file) {
         engine.destroy();
-        return res.status(404).json({ error: "No video file found" });
+        return res.status(404).json({ error: "No playable file found" });
       }
 
       const range = req.headers.range;
@@ -291,42 +265,60 @@ app.get("/stream", async (req, res) => {
         const parts = range.replace(/bytes=/, "").split("-");
         const start = parseInt(parts[0], 10);
         const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        const chunkSize = end - start + 1;
 
+        if (start >= fileSize) {
+          res.status(416).send("Requested range not satisfiable");
+          return;
+        }
+
+        const chunksize = end - start + 1;
         const stream = file.createReadStream({ start, end });
 
-        res.writeHead(206, {
+        const head = {
           "Content-Range": `bytes ${start}-${end}/${fileSize}`,
           "Accept-Ranges": "bytes",
-          "Content-Length": chunkSize,
+          "Content-Length": chunksize,
           "Content-Type": "video/mp4",
-        });
+        };
 
+        res.writeHead(206, head);
         stream.pipe(res);
+
+        stream.on("error", (streamError) => {
+          console.error("Stream error:", streamError);
+          engine.destroy();
+        });
       } else {
-        res.writeHead(200, {
+        const head = {
           "Content-Length": fileSize,
           "Content-Type": "video/mp4",
-        });
-
+        };
+        res.writeHead(200, head);
         const stream = file.createReadStream();
         stream.pipe(res);
       }
     });
 
     engine.on("error", (err) => {
-      console.error("Torrent error:", err);
-      res.status(500).end();
+      console.error("Torrent engine error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Streaming error" });
+      }
+      engine.destroy();
     });
 
     res.on("close", () => {
       engine.destroy();
+      console.log("Stream closed, cleaning up");
     });
   } catch (error) {
-    console.error("Stream error:", error);
-    res.status(500).end();
+    console.error("Stream setup error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to setup stream" });
+    }
   }
 });
+
 // Add this new endpoint after the stream endpoint
 app.get("/download", async (req, res) => {
   try {

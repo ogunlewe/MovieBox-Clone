@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { auth } from '../../../backend/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { auth } from "../../../backend/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 const SignUp = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleSignUp = async (e) => {
     e.preventDefault();
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      navigate('/');
+      navigate("/");
     } catch (error) {
       setError(error.message);
     }
@@ -43,6 +43,15 @@ const SignUp = () => {
               className="w-full bg-[#2C2C35] text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-[#f47521]"
             />
           </div>
+          <div>
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-[#2C2C35] text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-[#f47521]"
+            />
+          </div>
           <button
             type="submit"
             className="w-full bg-[#f47521] text-white py-3 rounded-md hover:bg-[#ff8534] transition-colors"
@@ -51,7 +60,7 @@ const SignUp = () => {
           </button>
         </form>
         <p className="text-gray-400 mt-4 text-center">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <a href="/login" className="text-[#f47521] hover:underline">
             Sign in
           </a>

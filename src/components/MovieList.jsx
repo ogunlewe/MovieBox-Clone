@@ -3,6 +3,8 @@ import DownloadButton from "./DownloadButton";
 import VideoPlayer from "./VideoPlayer";
 import SkeletonLoader from "./SkeletonLoader";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 const MovieList = () => {
   const [movies, setMovies] = useState([]);
   const [showPlayer, setShowPlayer] = useState(false);
@@ -20,9 +22,7 @@ const MovieList = () => {
       setLoading(true);
       console.log("Fetching movies:", { page, limit: 20 });
 
-      const response = await fetch(
-        `http://localhost:5000/movies?page=${page}&limit=20`
-      );
+      const response = await fetch(`${API_URL}/movies?page=${page}&limit=20`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -103,7 +103,7 @@ const MovieList = () => {
       console.log("Searching for:", searchValue);
 
       const response = await fetch(
-        `http://localhost:5000/movies/search?title=${encodeURIComponent(
+        `${API_URL}/movies/search?title=${encodeURIComponent(
           searchValue
         )}&page=${page}&limit=20`
       );
@@ -336,18 +336,13 @@ const MovieList = () => {
       </div>
 
       {/* Video Player Modal */}
-      
-          
-     
+
       {showPlayer && (
         <VideoPlayer
           magnetLink={showPlayer.magnet}
           onClose={() => setShowPlayer(false)}
         />
       )}
-
-      
-    
     </div>
   );
 };
