@@ -8,7 +8,7 @@ function MovieDetails() {
   useEffect(() => {
     const fetchMovieDetails = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/movies/${id}`);
+        const response = await fetch(`http://localhost:5000/movies/${id}` || `https://moviebox-backend.vercel.app/movies/${id}`);
         const data = await response.json();
         setMovie(data);
       } catch (error) {

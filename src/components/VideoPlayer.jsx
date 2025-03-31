@@ -7,9 +7,9 @@ const VideoPlayer = ({ magnetLink, onClose }) => {
   useEffect(() => {
     if (magnetLink) {
       // Construct the streaming URL using the server endpoint.
-      const streamUrl = `http://localhost:5000/stream?magnet=${encodeURIComponent(
-        magnetLink
-      )}`;
+      const streamUrl = magnetLink.startsWith("magnet:")
+        ? `http://localhost:5000/stream?magnet=${encodeURIComponent(magnetLink)}`
+        : `https://moviebox-backend.vercel.app/stream?magnet=${encodeURIComponent(magnetLink)}`;
       setVideoUrl(streamUrl);
       setLoading(false);
     }

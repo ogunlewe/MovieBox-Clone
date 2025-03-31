@@ -9,8 +9,11 @@ const DownloadButton = ({ magnetLink }) => {
     setDownloadUrl(""); // Reset previous download URL
 
     try {
+      const baseUrl = process.env.NODE_ENV === "development" 
+        ? "http://localhost:5000" 
+        : "https://moviebox-backend.vercel.app";
       const response = await fetch(
-        `http://localhost:5000/stream?magnet=${encodeURIComponent(magnetLink)}`
+        `${baseUrl}/stream?magnet=${encodeURIComponent(magnetLink)}`
       );
       if (!response.ok) throw new Error("Failed to start torrent stream");
 
