@@ -1,22 +1,25 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { auth } from "../../backend/firebase";
-import {
+import { 
+  Auth,
+  User,
+  UserCredential,
+  GoogleAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
-  GoogleAuthProvider,
   signOut,
-  User,
-} from "firebase/auth";
+  onAuthStateChanged
+} from 'firebase/auth';
+import { auth } from "../../backend/firebase";
 
 const googleProvider = new GoogleAuthProvider();
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<UserCredential>;
+  login: (email: string, password: string) => Promise<UserCredential>;
+  signup: (email: string, password: string) => Promise<UserCredential>;
   logout: () => Promise<void>;
 }
 
@@ -35,24 +38,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return unsubscribe;
   }, []);
 
-  const signInWithGoogle = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Google sign-in error:", error);
-      throw error;
-    }
+  const signInWithGoogle = (): Promise<UserCredential> => {
+    return signInWithPopup(auth, googleProvider);
   };
 
-  const login = async (email: string, password: string) => {
+  const login = (email: string, password: string): Promise<UserCredential> => {
     return signInWithEmailAndPassword(auth, email, password);
   };
 
-  const signup = async (email: string, password: string) => {
+  const signup = (email: string, password: string): Promise<UserCredential> => {
     return createUserWithEmailAndPassword(auth, email, password);
   };
 
-  const logout = () => signOut(auth);
+  const logout = (): Promise<void> => {
+    return signOut(auth);
+  };
 
   const value = {
     user,

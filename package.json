@@ -18,7 +18,7 @@
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "firebase": "^11.5.0",
+    "firebase": "^10.8.0",
     "firebase-admin": "^13.2.0",
     "fs": "^0.0.1-security",
     "https-proxy-agent": "^7.0.6",
